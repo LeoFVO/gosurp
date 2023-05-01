@@ -1,11 +1,16 @@
 package client
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
 	"crypto/tls"
 	"fmt"
 	"net"
 	"net/mail"
 	"net/smtp"
+	"strings"
+
+	"github.com/LeoFVO/gosurp/pkg/dkim"
 )
 
 // SMTPServer represents an SMTP server.
@@ -81,6 +86,31 @@ func (s *SMTPServer) SendMail(mail Mail, withTLS bool) error {
     }
     defer wc.Close()
 
+
+    privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return fmt.Errorf("error generating RSA key: %s", err) 
+	}
+
+	// Create signer
+	signer := &dkim.Signer{
+		PrivateKey: privateKey,
+        /*
+         * The domain name that the email is being sent from.
+         * This is the domain that the DKIM public key will be published under in DNS.
+         * The domain name should be the same as the domain name in the From header of the email.
+         */
+		Domain: strings.Split(mail.From.String(), "@")[1],
+        /*
+         * In DKIM, a selector is a string that identifies a specific public key in the DNS record for the domain. 
+         * The DKIM signature for a message includes the selector value, allowing the recipient to look up the corresponding public key in DNS.
+         * The "default" selector is just a convention that can be used if you don't need to have multiple selectors for the same domain. 
+         * It's just a standard way to name the selector that holds the DKIM public key for the domain, and it makes it easier to configure DKIM for many email clients and services that expect the selector to be named "default".
+         */
+		Selector: "default",
+	}
+
+
     // Write the email headers.
     headers := fmt.Sprintf("From: %s\r\n", mail.From.String())
     headers += fmt.Sprintf("To: %s\r\n", mail.To[0].String())
@@ -88,6 +118,11 @@ func (s *SMTPServer) SendMail(mail Mail, withTLS bool) error {
         headers += fmt.Sprintf("Cc: %s\r\n", to.String())
     }
     headers += fmt.Sprintf("Subject: %s\r\n", mail.Subject)
+    header, err := signer.Sign(mail.Body)
+	if err != nil {
+		return fmt.Errorf("error signing message: %s", err)
+	}
+    headers += fmt.Sprintf("DKIM-Signature: %s\r\n", header)
     headers += "\r\n"
 
     if _, err := fmt.Fprintf(wc, headers+mail.Body); err != nil {
