@@ -1,0 +1,17 @@
+{
+  "-- Getting Started --": {
+    "type": "separator",
+    "title": "Getting Started"
+  },
+  "introduction": "Introduction",
+  "installation": "Installation",
+  "-- API Reference --": {
+    "type": "separator",
+    "title": "API Reference"
+  },
+  "cli": "CLI",
+  "-- Developer --": {
+    "type": "separator",
+    "title": "Developer Guide"
+  }
+}

@@ -1,0 +1,71 @@
+name: Deploy docs to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'docs/**'
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: docs
+    env:
+      NEXT_PUBLIC_REPOSITORY: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          node-version: 19
+          cache: 'pnpm'
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.19
+      - name: Build
+        run: cd auto/cli && go run -v main.go
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 7
+      - name: Setup Pages
+        uses: actions/configure-pages@v2
+      - name: Restore cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            .next/cache
+          # Generate a new cache whenever packages or source files change.
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('**.[jt]s', '**.[jt]sx') }}
+          # If source files changed but packages didn't, rebuild from a prior cache.
+          restore-keys: |
+            ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json', '**/pnpm-lock.yaml') }}-
+      - name: Install dependencies
+        run: pnpm install
+      - name: Build with Next.js
+        run: pnpm next build
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v1
+        with:
+          path: ./docs/dist
+
+  deploy:
+    if: ${{ contains(fromJSON('["push"]'), github.event_name) }}
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v2

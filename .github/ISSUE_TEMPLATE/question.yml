@@ -1,0 +1,26 @@
+name: Ask Question
+description: Ask a question about the project
+title: '[QUESTION]: '
+labels: ['question']
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking a look on the project 🤗
+        Make sure there aren't any open/closed issues for this question before asking 😃
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Type your question here
+      description: Tell us what you want to know about the project, we will try to answer as soon as possible
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional-information
+    attributes:
+      label: Additional Information
+      description: |
+        Provide any additional information such as logs, screenshots, likes, scenarios in which the bug occurs so that it facilitates resolving the issue.
