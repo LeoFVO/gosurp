@@ -1,4 +1,4 @@
-module github.com/LeoFVO/go4hackers
+module github.com/LeoFVO/gosurp
 
 go 1.19
 

@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/LeoFVO/go4hackers/cmd"
+	"github.com/LeoFVO/gosurp/cmd"
 	"github.com/spf13/cobra/doc"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"

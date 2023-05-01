@@ -4,15 +4,16 @@ import (
 	"io"
 	"os"
 
-	"github.com/LeoFVO/go4hackers/cmd/hello"
+	"github.com/LeoFVO/gosurp/cmd/client"
+	"github.com/LeoFVO/gosurp/cmd/server"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
 // rootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
-	Use:   "go4hackers",
-	Short: "A CLI for Go4Hackers",
+	Use:   "gosurp",
+	Short: "gosurp is a simple SMTP server and client written in Go",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		cliFlag, _ := cmd.Flags().GetCount("verbose")
 
@@ -45,7 +46,8 @@ func init() {
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
-	RootCmd.AddCommand(hello.RootCmd)
+	RootCmd.AddCommand(client.RootCmd)
+	RootCmd.AddCommand(server.RootCmd)
 
 	RootCmd.PersistentFlags().CountP("verbose", "v", "Level of verbosity: -v for INFO, -vv for DEBUG, -vvv for TRACE.")
 }

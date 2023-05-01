@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/LeoFVO/go4hackers/cmd"
+	"github.com/LeoFVO/gosurp/cmd"
 )
 
 func main() {
