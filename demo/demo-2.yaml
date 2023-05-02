@@ -5,14 +5,14 @@ server:
 mail:
   from:
     name: ''
-    address: 'agent1337@fsociety.com'
+    address: 'agent1337@evilcorp.com'
   to:
-    - name: ''
-      address: 'johndoe@victim.com'
-    - name: ''
-      address: 'janedoe@victim.com'
-    - name: ''
-      address: 'jakedoe@victim.com'
+    - name: 'John'
+      address: 'johndoe@fsociety.com'
+    - name: 'Jane'
+      address: 'janedoe@fsociety.com'
+    - name: 'Jake'
+      address: 'jakedoe@fsociety.com'
   subject: 'Welcome to the fsociety'
   body: |
     Hello World!

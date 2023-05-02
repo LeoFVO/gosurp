@@ -4,8 +4,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/LeoFVO/gosurp/cmd/client"
-	"github.com/LeoFVO/gosurp/cmd/server"
+	"github.com/LeoFVO/gosurp/cmd/smtp"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -46,8 +45,7 @@ func init() {
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
-	RootCmd.AddCommand(client.RootCmd)
-	RootCmd.AddCommand(server.RootCmd)
+	RootCmd.AddCommand(smtp.RootCmd)
 
 	RootCmd.PersistentFlags().CountP("verbose", "v", "Level of verbosity: -v for INFO, -vv for DEBUG, -vvv for TRACE.")
 }

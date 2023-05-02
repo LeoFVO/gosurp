@@ -1,4 +1,4 @@
-package server
+package smtp
 
 import (
 	"net"
@@ -7,21 +7,17 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type Server struct {
-	Hostname string
-	Port string
-}
 
-func Start(server Server) error {
-	// Listen for incoming connections on port 25
+func (server Server) Listen() error {
+	log.Infof("Server started listening on %s:%s", server.Hostname, server.Port)
 	// The ln variable represents the listener object, which is used to accept incoming connections. 
-	log.Infoln("Server started on port 25")
 	ln, err := net.Listen("tcp", server.Hostname + ":" + server.Port)
 	if err != nil {
 		return err
 	}
 	// The defer ln.Close() statement ensures that the listener is closed when the function exits.
 	defer ln.Close()
+
 	// Accept incoming connections
 	// When a new connection is accepted, the handleConnection() function is called to handle incoming messages:
 	for {
@@ -37,7 +33,7 @@ func Start(server Server) error {
 }
 
 func handleConnection(conn net.Conn) {
-	// Send initial greeting message
+	// Send initial greeting message according to the RFC
 	conn.Write([]byte("220 localhost ESMTP Service Ready\r\n"))
 	log.Debugf("Connection from %s", conn.RemoteAddr().String())
 

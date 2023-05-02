@@ -1,4 +1,4 @@
-package client
+package smtp
 
 import (
 	"crypto/rand"
@@ -6,41 +6,27 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net"
-	"net/mail"
 	"net/smtp"
 	"strings"
 
 	"github.com/LeoFVO/gosurp/pkg/dkim"
+	"github.com/LeoFVO/gosurp/pkg/utils"
 )
 
-// SMTPServer represents an SMTP server.
-type SMTPServer struct {
-    Host string `yaml:"host"`
-    Port string `yaml:"port"`
-    Username string `yaml:"username"`
-    Password string `yaml:"password"`
-}
-
-// Mail represents an email message.
-type Mail struct {
-    From    mail.Address `yaml:"from"`
-    To      []mail.Address `yaml:"to"`
-    Subject string `yaml:"subject"`
-    Body    string `yaml:"body"`
-}
-
 // SendMail sends an email using the provided SMTP server and mail message.
-func (s *SMTPServer) SendMail(mail Mail, withTLS bool) error {
+func (s *Server) Send(mail Envelope, withTLS bool) error {
 
-    if s.Host == "" {
+    if s.Hostname == "" {
         return fmt.Errorf("SMTP server address required")
     }
     if s.Port == "" {
         return fmt.Errorf("SMTP server port required")
     }
 
+    s.Hostname = utils.GetSMTPServerAddress(s.Hostname)
+
     // Connect to the SMTP server.
-    conn, err := net.Dial("tcp", s.Host+":"+s.Port)
+    conn, err := net.Dial("tcp", s.Hostname+":"+s.Port)
     if err != nil {
         return err
     }
@@ -49,14 +35,14 @@ func (s *SMTPServer) SendMail(mail Mail, withTLS bool) error {
     if withTLS {
     // Convert the connection to a TLS connection.
         config := &tls.Config{
-            ServerName: s.Host,
+            ServerName: s.Hostname,
         }
         conn = tls.Client(conn, config)
     }
     
 
     // Set up an SMTP client.
-    client, err := smtp.NewClient(conn, s.Host)
+    client, err := smtp.NewClient(conn, s.Hostname)
     if err != nil {
         return err
     }
@@ -64,7 +50,7 @@ func (s *SMTPServer) SendMail(mail Mail, withTLS bool) error {
 
     // Authenticate with the server.
     if s.Username != "" && s.Password != "" {
-        if err := client.Auth(smtp.PlainAuth("", s.Username, s.Password, s.Host)); err != nil {
+        if err := client.Auth(smtp.PlainAuth("", s.Username, s.Password, s.Hostname)); err != nil {
             return err
         }
     }
@@ -92,7 +78,6 @@ func (s *SMTPServer) SendMail(mail Mail, withTLS bool) error {
 		return fmt.Errorf("error generating RSA key: %s", err) 
 	}
 
-	// Create signer
 	signer := &dkim.Signer{
 		PrivateKey: privateKey,
         /*
@@ -100,7 +85,7 @@ func (s *SMTPServer) SendMail(mail Mail, withTLS bool) error {
          * This is the domain that the DKIM public key will be published under in DNS.
          * The domain name should be the same as the domain name in the From header of the email.
          */
-		Domain: strings.Split(mail.From.String(), "@")[1],
+		Domain: strings.TrimSuffix(strings.Split(mail.From.String(), "@")[1], ">"),
         /*
          * In DKIM, a selector is a string that identifies a specific public key in the DNS record for the domain. 
          * The DKIM signature for a message includes the selector value, allowing the recipient to look up the corresponding public key in DNS.
@@ -108,6 +93,16 @@ func (s *SMTPServer) SendMail(mail Mail, withTLS bool) error {
          * It's just a standard way to name the selector that holds the DKIM public key for the domain, and it makes it easier to configure DKIM for many email clients and services that expect the selector to be named "default".
          */
 		Selector: "default",
+        /*
+         * The headers that should be included in the DKIM signature.
+         * The From, To, Subject, and Date headers are always included in the signature, so you don't need to include them here.
+         * The headers should be in the order that they appear in the email.    
+         */
+        Headers: []string{
+            "From",
+            "To",
+            "Subject",
+        },
 	}
 
 
@@ -118,7 +113,8 @@ func (s *SMTPServer) SendMail(mail Mail, withTLS bool) error {
         headers += fmt.Sprintf("Cc: %s\r\n", to.String())
     }
     headers += fmt.Sprintf("Subject: %s\r\n", mail.Subject)
-    header, err := signer.Sign(mail.Body)
+
+    header, err := signer.Sign(headers+mail.Body)
 	if err != nil {
 		return fmt.Errorf("error signing message: %s", err)
 	}
