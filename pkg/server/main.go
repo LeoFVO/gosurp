@@ -15,7 +15,7 @@ type Server struct {
 func Start(server Server) error {
 	// Listen for incoming connections on port 25
 	// The ln variable represents the listener object, which is used to accept incoming connections. 
-	log.Infof("Server started on port 25\n")
+	log.Infoln("Server started on port 25")
 	ln, err := net.Listen("tcp", server.Hostname + ":" + server.Port)
 	if err != nil {
 		return err
@@ -62,7 +62,7 @@ func handleConnection(conn net.Conn) {
 		// Handle incoming command
 		switch command {
 			case "EHLO", "HELO":
-				log.Tracef("Received command %s %+v", command, strings.Join(args, ","))
+				log.Tracef("Received command %s %+v", command, args)
 				/*
 				* The list of features sent in the code includes:
 				*
@@ -77,13 +77,13 @@ func handleConnection(conn net.Conn) {
 				// conn.Write([]byte("250 STARTTLS\r\n"))
 				// conn.Write([]byte("250 OK\r\n"))
 			case "MAIL":
-				log.Tracef("Received command %s %+v", command, strings.Join(args, ","))
+				log.Tracef("Received command %s %+v", command, args)
 				conn.Write([]byte("250 OK\r\n"))
 			case "RCPT":
-				log.Tracef("Received command %s %+v", command, strings.Join(args, ","))
+				log.Tracef("Received command %s %+v", command, args)
 				conn.Write([]byte("250 OK\r\n"))
 			case "DATA":
-				log.Tracef("Received command %s %+v", command, strings.Join(args, ","))
+				log.Tracef("Received command %s %+v", command, args)
 				conn.Write([]byte("354 Start mail input; end with <CRLF>.<CRLF>\r\n"))
 
 				// Read incoming message data
@@ -102,7 +102,7 @@ func handleConnection(conn net.Conn) {
 				log.Debugf("Received message: \n%s\n", string(data))
 				conn.Write([]byte("250 OK\r\n"))
 			case "QUIT":
-				log.Tracef("Received command %s %+v", command, strings.Join(args, ","))
+				log.Tracef("Received command %s %+v", command, args)
 				conn.Write([]byte("221 Bye\r\n"))
 				conn.Close()
 				log.Debugf("Connection from %s closed\n", conn.RemoteAddr().String())

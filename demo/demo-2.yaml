@@ -1,0 +1,21 @@
+server:
+  host: localhost
+  port: 2525
+
+mail:
+  from:
+    name: ''
+    address: 'agent1337@fsociety.com'
+  to:
+    - name: ''
+      address: 'johndoe@victim.com'
+    - name: ''
+      address: 'janedoe@victim.com'
+    - name: ''
+      address: 'jakedoe@victim.com'
+  subject: 'Welcome to the fsociety'
+  body: |
+    Hello World!
+    This is a test email.
+    Regards,
+    fsociety

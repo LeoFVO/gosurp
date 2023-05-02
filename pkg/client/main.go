@@ -15,18 +15,18 @@ import (
 
 // SMTPServer represents an SMTP server.
 type SMTPServer struct {
-    Host string
-    Port string
-    Username string
-    Password string
+    Host string `yaml:"host"`
+    Port string `yaml:"port"`
+    Username string `yaml:"username"`
+    Password string `yaml:"password"`
 }
 
 // Mail represents an email message.
 type Mail struct {
-    From    mail.Address
-    To      []mail.Address
-    Subject string
-    Body    string
+    From    mail.Address `yaml:"from"`
+    To      []mail.Address `yaml:"to"`
+    Subject string `yaml:"subject"`
+    Body    string `yaml:"body"`
 }
 
 // SendMail sends an email using the provided SMTP server and mail message.

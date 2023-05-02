@@ -1,0 +1,14 @@
+server:
+  host: localhost
+  port: 2525
+
+mail:
+  from:
+    name: ''
+    address: 'dupont@attacker.com'
+  to:
+    - name: ''
+      address: 'johndoe@victim.com'
+  subject: 'Hello World'
+  body: |
+    Hello World!

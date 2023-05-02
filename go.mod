@@ -7,6 +7,7 @@ require github.com/spf13/cobra v1.7.0
 require (
 	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/toorop/go-dkim v0.0.0-20201103131630-e1cd1a0a5208 // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
 
 require (
