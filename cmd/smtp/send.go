@@ -15,7 +15,7 @@ import (
 type Config struct {
 	Server smtp.Server `yaml:"server"`
 	Mail smtp.Envelope `yaml:"mail"`
-	DKIM smtp.BypassDKIM `yaml:"dkim"`
+	DKIM smtp.DKIM `yaml:"dkim"`
 }
 
 var send = &cobra.Command{
@@ -56,6 +56,9 @@ var send = &cobra.Command{
 			if config.DKIM.PrivateKey != "" {
 				cmd.Flags().Set("dkim-key", config.DKIM.PrivateKey)
 			}
+			if config.DKIM.Domain != "" {
+				cmd.Flags().Set("dkim-domain", config.DKIM.Domain)
+			}
 		}
 		return nil
 	},
@@ -80,12 +83,14 @@ var send = &cobra.Command{
 		// Should we try to bypass DKIM 
 		selector, _ := cmd.Flags().GetString("dkim-selector")
 		privateKey, _ := cmd.Flags().GetString("dkim-key")
+		domain, _ := cmd.Flags().GetString("dkim-domain")
 
 		options := smtp.SendOptions{}
 		if selector != "" && privateKey != "" {
-			options.BypassDKIM = smtp.BypassDKIM{
+			options.DKIM = smtp.DKIM{
 				Selector: selector,
 				PrivateKey: privateKey,
+				Domain: domain,
 			}
 		}
 
@@ -128,6 +133,7 @@ func init() {
 
 	// Bypass DKIM flags
 	send.PersistentFlags().StringP("dkim-selector", "", "", "DKIM selector to use")
+	send.PersistentFlags().StringP("dkim-domain", "", "", "DKIM domain to use")
 	send.PersistentFlags().StringP("dkim-key", "", "", "DKIM private key to use")
 
 	// Force TLS flags

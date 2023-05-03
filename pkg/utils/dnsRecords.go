@@ -25,7 +25,7 @@ func GetSMTPServerAddress(domain string) string {
 		server = strings.TrimSuffix(mxRecords[0].Host, ".")
 		log.Debugf("Using %s as SMTP server address", server)
 	} else {
-		log.Debugf("SMTP server address is an IP address, using it as is")
+		log.Debugf("SMTP server address is an IP address or localhost, using it as is")
 		server = domain
 	}
 	return server

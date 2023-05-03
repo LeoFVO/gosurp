@@ -16,3 +16,9 @@ type Envelope struct {
     Subject string `yaml:"subject"`
     Body    string `yaml:"body"`
 }
+
+type DKIM struct {
+    Selector string `yaml:"selector"`
+    PrivateKey string `yaml:"private_key"`
+    Domain string `yaml:"domain"`
+}

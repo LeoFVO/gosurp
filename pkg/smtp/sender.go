@@ -11,10 +11,16 @@ import (
 
 	"github.com/LeoFVO/gosurp/pkg/dkim"
 	"github.com/LeoFVO/gosurp/pkg/utils"
+	log "github.com/sirupsen/logrus"
 )
 
+type SendOptions struct {
+    WithTLS bool
+    DKIM DKIM
+}
+
 // SendMail sends an email using the provided SMTP server and mail message.
-func (s *Server) Send(mail Envelope, withTLS bool) error {
+func (s *Server) Send(mail Envelope, options SendOptions) error {
 
     if s.Hostname == "" {
         return fmt.Errorf("SMTP server address required")
@@ -32,7 +38,7 @@ func (s *Server) Send(mail Envelope, withTLS bool) error {
     }
     defer conn.Close()
 
-    if withTLS {
+    if options.WithTLS {
     // Convert the connection to a TLS connection.
         config := &tls.Config{
             ServerName: s.Hostname,
@@ -72,14 +78,7 @@ func (s *Server) Send(mail Envelope, withTLS bool) error {
     }
     defer wc.Close()
 
-
-    privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		return fmt.Errorf("error generating RSA key: %s", err) 
-	}
-
-	signer := &dkim.Signer{
-		PrivateKey: privateKey,
+    signer := &dkim.Signer{
         /*
          * The domain name that the email is being sent from.
          * This is the domain that the DKIM public key will be published under in DNS.
@@ -105,8 +104,33 @@ func (s *Server) Send(mail Envelope, withTLS bool) error {
         },
 	}
 
+    // if bypass DKIM is enabled, we need to sign the email using the provided private key and change selector
+
+    if options.DKIM != (DKIM{}) {
+        log.Tracef("Custom DKIM config provided, using selector %s and private key %s", options.DKIM.Selector, options.DKIM.PrivateKey)
+        signer.Selector = options.DKIM.Selector
+
+        // Load the private key from the provided path.
+        privateKey := utils.LoadRSAPrivateKey(options.DKIM.PrivateKey)
+        signer.PrivateKey = privateKey
+
+        if options.DKIM.Domain != "" {
+            log.Tracef("Custom DKIM config provided, using domain %s", options.DKIM.Domain)
+            signer.Domain = options.DKIM.Domain
+        }
+    } else {
+        log.Tracef("Custom DKIM config disabled, generating new RSA key pair")
+        // Generate a new RSA key pair to use for the DKIM signature.
+        privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+        if err != nil {
+            return fmt.Errorf("error generating RSA key: %s", err) 
+        }
+        signer.PrivateKey = privateKey
+    }
+
 
     // Write the email headers.
+    log.Tracef("Starting to write email headers")
     headers := fmt.Sprintf("From: %s\r\n", mail.From.String())
     headers += fmt.Sprintf("To: %s\r\n", mail.To[0].String())
     for _, to := range mail.To[1:] {
@@ -114,13 +138,18 @@ func (s *Server) Send(mail Envelope, withTLS bool) error {
     }
     headers += fmt.Sprintf("Subject: %s\r\n", mail.Subject)
 
+    // Sign the email body and add the DKIM-Signature header.
+    log.Tracef("Starting to sign email body")
     header, err := signer.Sign(headers+mail.Body)
 	if err != nil {
 		return fmt.Errorf("error signing message: %s", err)
 	}
+    log.Tracef("Starting to add DKIM-Signature header")
     headers += fmt.Sprintf("DKIM-Signature: %s\r\n", header)
     headers += "\r\n"
 
+    // Write the email headers and body to the SMTP client.
+    log.Tracef("Starting to write email headers and body to the SMTP client")
     if _, err := fmt.Fprintf(wc, headers+mail.Body); err != nil {
         return err
     }

@@ -2,6 +2,10 @@ server:
   host: localhost
   port: 2525
 
+dkim:
+  selector: 'default'
+  private_key: 'private_key.pem'
+
 mail:
   from:
     name: ''
