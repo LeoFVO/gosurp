@@ -1,17 +1,18 @@
 ---
-title: "CLI"
+title: 'CLI'
 ---
-## go4hackers
 
-A CLI for Go4Hackers
+## gosurp
+
+A CLI for gosurp
 
 ### Options
 
 ```
-  -h, --help            help for go4hackers
+  -h, --help            help for gosurp
   -v, --verbose count   Level of verbosity: -v for INFO, -vv for DEBUG, -vvv for TRACE.
 ```
 
 ### See Also
 
-* [go4hackers hello](/docs/cli/go4hackers-hello)	 - Manage hellos from the CLI
+- [gosurp hello](/docs/cli/gosurp-hello) - Manage hellos from the CLI

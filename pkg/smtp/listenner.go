@@ -72,10 +72,10 @@ func handleConnection(conn net.Conn) {
 				* The server may support other features that can be included in the list. The purpose of sending the list of features is to allow the client to know what features are available and to negotiate which features to use.
 				*/
 				conn.Write([]byte("250 localhost\r\n"))
-				// conn.Write([]byte("250 SIZE 31457280\r\n"))
-				// conn.Write([]byte("250 8BITMIME\r\n"))
-				// conn.Write([]byte("250 STARTTLS\r\n"))
-				// conn.Write([]byte("250 OK\r\n"))
+				conn.Write([]byte("250-SIZE 31457280\r\n"))
+				conn.Write([]byte("250-8BITMIME\r\n"))
+				conn.Write([]byte("250-STARTTLS\r\n"))
+				conn.Write([]byte("250-OK\r\n"))
 			case "MAIL":
 				if len(args) < 1 {
 					log.Tracef("Received command %s %+v", command, args)
