@@ -1,6 +1,7 @@
 package smtp
 
 import (
+	"crypto/tls"
 	"net"
 	"strings"
 
@@ -126,6 +127,39 @@ func handleConnection(conn net.Conn) {
 				}
 				log.Debugf("Received message: \n%s\n", string(data))
 				conn.Write([]byte("250 OK\r\n"))
+			case "STARTTLS":
+				if len(args) > 0 {
+						log.Tracef("Received command %s %+v", command, args)
+						conn.Write([]byte("501 Syntax: STARTTLS\r\n"))
+						break
+				}
+				log.Tracef("Received command %s", command)
+
+				// Check if TLS is already established
+				if _, ok := conn.(*tls.Conn); ok {
+						conn.Write([]byte("503 Error: TLS already established\r\n"))
+						break
+				}
+
+				// Send response code indicating that TLS negotiation will begin
+				conn.Write([]byte("220 Ready to start TLS\r\n"))
+				conn.Write([]byte("220-Go ahead\r\n"))
+
+				// Upgrade the connection to TLS
+				tlsConfig := &tls.Config{
+						// Customize TLS configuration here
+				}
+				tlsConn := tls.Server(conn, tlsConfig)
+				err = tlsConn.Handshake()
+				if err != nil {
+						log.Errorln(err)
+						break
+				}
+
+				// Start new session with upgraded connection
+				handleConnection(tlsConn)
+
+				return
 			case "QUIT":
 				if len(args) > 0 {
 					log.Tracef("Received command %s %+v", command, args)

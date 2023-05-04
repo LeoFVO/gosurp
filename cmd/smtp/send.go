@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/mail"
 	"os"
+	"time"
 
 	smtp "github.com/LeoFVO/gosurp/pkg/smtp"
 	"github.com/spf13/cobra"
@@ -98,6 +99,11 @@ var send = &cobra.Command{
 		forceTLS, _ := cmd.Flags().GetBool("tls")
 		options.WithTLS = forceTLS
 
+		// Set timeout for connect
+		timeout, _ := cmd.Flags().GetDuration("timeout")
+		options.Timeout = timeout
+
+
 		from, _ := mail.ParseAddress(fromEmail)
 		to := []mail.Address{}
 		for _, recipient := range toEmail {
@@ -138,6 +144,9 @@ func init() {
 
 	// Force TLS flags
 	send.PersistentFlags().BoolP("tls", "", false, "Force TLS connection")
+	
+	// Set timeout for connect
+	send.PersistentFlags().DurationP("timeout", "", 20 * time.Second, "Timeout for connection")
 
 	// Use can provide a config file to use instead of the flags
 	send.PersistentFlags().StringP("from-file", "f", "", "Config file to use")

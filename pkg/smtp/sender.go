@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/smtp"
 	"strings"
+	"time"
 
 	"github.com/LeoFVO/gosurp/pkg/dkim"
 	"github.com/LeoFVO/gosurp/pkg/utils"
@@ -17,6 +18,7 @@ import (
 type SendOptions struct {
     WithTLS bool
     DKIM DKIM
+    Timeout time.Duration
 }
 
 // SendMail sends an email using the provided SMTP server and mail message.
@@ -32,27 +34,39 @@ func (s *Server) Send(mail Envelope, options SendOptions) error {
     s.Hostname = utils.GetSMTPServerAddress(s.Hostname)
 
     // Connect to the SMTP server.
-    conn, err := net.Dial("tcp", s.Hostname+":"+s.Port)
+    session := net.Dialer{Timeout: options.Timeout}
+    conn, err := session.Dial("tcp", fmt.Sprintf("%s:%s", s.Hostname, s.Port))
     if err != nil {
         return err
     }
     defer conn.Close()
-
-    if options.WithTLS {
-    // Convert the connection to a TLS connection.
-        config := &tls.Config{
-            ServerName: s.Hostname,
-        }
-        conn = tls.Client(conn, config)
-    }
-    
 
     // Set up an SMTP client.
     client, err := smtp.NewClient(conn, s.Hostname)
     if err != nil {
         return err
     }
+    log.Debugf("SMTP client created")
     defer client.Quit()
+ 
+    if options.WithTLS {
+       log.Debugf("SMTP server requires TLS, converting connection to TLS")
+        // Convert the connection to a TLS connection.
+       config := &tls.Config{
+           ServerName: s.Hostname,
+       }
+
+       //ask for STARTTLS
+       if ok, _ := client.Extension("STARTTLS"); ok {
+           if err := client.StartTLS(config); err != nil {
+               return err
+           }
+       } else {
+           return fmt.Errorf("SMTP server does not support STARTTLS")
+       }
+       
+       log.Debugf("Connection converted to TLS")
+   }
 
     // Authenticate with the server.
     if s.Username != "" && s.Password != "" {
@@ -60,6 +74,7 @@ func (s *Server) Send(mail Envelope, options SendOptions) error {
             return err
         }
     }
+
 
     // Set the sender and recipient of the email.
     if err := client.Mail(mail.From.Address); err != nil {
