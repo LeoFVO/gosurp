@@ -1,7 +1,10 @@
 package smtp
 
 import (
+	"sync"
+
 	"github.com/LeoFVO/gosurp/pkg/smtp"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -13,14 +16,28 @@ var listen = &cobra.Command{
 	Args:  cobra.MinimumNArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		hostname, _ := cmd.Flags().GetString("hostname")
-		port, _ := cmd.Flags().GetString("port")
-		err := smtp.Server{Hostname: hostname, Port: port}.Listen()
+		ports, _ := cmd.Flags().GetStringSlice("port")
+		
+		var wg sync.WaitGroup // Use a WaitGroup to block main() exit until all goroutines have completed.
 
-		return err
+		for _, port := range ports {
+			log.Infof("Starting server on %s:%s", hostname, port)
+			wg.Add(1)
+			go func(port string) {
+				err := smtp.Server{Hostname: hostname, Port: port}.Listen()
+				if err != nil {
+					log.Errorf("Error starting server on %s:%s: %s", hostname, port, err)
+					wg.Done()
+				}
+			}(port)
+		}
+		wg.Wait()
+
+		return nil
 	},
 }
 
 func init() {
 	listen.PersistentFlags().StringP("hostname", "", "localhost", "Hostname to listen on")
-	listen.PersistentFlags().StringP("port", "", "25", "Port to listen on")
+	listen.PersistentFlags().StringSliceP("port", "", []string{"25"}, "Ports to listen on, can be specified multiple times")
 }

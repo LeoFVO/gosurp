@@ -10,12 +10,12 @@ import (
 
 
 func (server Server) Listen() error {
-	log.Infof("Server started listening on %s:%s", server.Hostname, server.Port)
 	// The ln variable represents the listener object, which is used to accept incoming connections. 
 	ln, err := net.Listen("tcp", server.Hostname + ":" + server.Port)
 	if err != nil {
 		return err
 	}
+	log.Infof("Server started listening on %s:%s", server.Hostname, server.Port)
 	// The defer ln.Close() statement ensures that the listener is closed when the function exits.
 	defer ln.Close()
 
@@ -36,7 +36,7 @@ func (server Server) Listen() error {
 func handleConnection(conn net.Conn) {
 	// Send initial greeting message according to the RFC
 	conn.Write([]byte("220 localhost ESMTP Service Ready\r\n"))
-	log.Debugf("Connection from %s", conn.RemoteAddr().String())
+	log.Debugf("Connection from %s to %s", conn.RemoteAddr().String(), conn.LocalAddr().String())
 
 	// Buffer for incoming messages
 	buf := make([]byte, 1024)
