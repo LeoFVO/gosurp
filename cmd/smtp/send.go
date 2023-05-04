@@ -47,6 +47,9 @@ var send = &cobra.Command{
 			cmd.Flags().Set("subject", config.Mail.Subject)
 			cmd.Flags().Set("body", config.Mail.Body)
 			cmd.Flags().Set("hostname", config.Server.Hostname)
+			for _, port := range config.Server.Ports {
+				cmd.Flags().Set("port", string(port))
+			}
 			cmd.Flags().Set("port", config.Server.Port)
 			cmd.Flags().Set("username", config.Server.Username)
 			cmd.Flags().Set("password", config.Server.Password)
@@ -71,12 +74,11 @@ var send = &cobra.Command{
 
 		// Create a new SMTP server instance
 		hostname, _ := cmd.Flags().GetString("hostname")
-		port, _ := cmd.Flags().GetString("port")
+		ports, _ := cmd.Flags().GetStringSlice("port")
 		username, _ := cmd.Flags().GetString("username")
 		password, _ := cmd.Flags().GetString("password")
 		server := smtp.Server{
 			Hostname: hostname,
-			Port: port,
 			Username: username,
 			Password: password,
 		}
@@ -112,14 +114,29 @@ var send = &cobra.Command{
 		}
 
 		mail := smtp.Envelope{From: *from, To: to, Subject: subject, Body: body}
-		log.Println("Start sending email...")
+		log.Infof("Sending email from %s to %s", (&mail.From).Address, mail.To[0].Address)
 
-		if err := server.Send(mail, options); err != nil {
-			log.Errorf("Error while sending email: %v", err)
-			return err
-		} else {
-			log.Println("Email sent successfully")
+		// Send email to specified port
+		sendToPort := func(port string) error {
+			server.Port = port
+			if err := server.Send(mail, options); err != nil {
+				log.Errorf("Error while sending email: %v", err)
+				return err
+			}
+			return nil
 		}
+
+		// Send email to all specified ports, stop at first success
+		for _, port := range ports {
+			if err := sendToPort(port); err != nil {
+				log.Warnf("Cannot send email to port %s, trying next port...", port)
+				continue
+			}
+			log.Infof("Email successfully sent to %s:%s", server.Hostname, port)
+			log.Tracef("Email successfully sent to port %s, stopping here", port)
+			return nil // Stop at first success
+		}
+
 		return nil
 	},
 }
@@ -133,7 +150,7 @@ func init() {
 
 	// SMTP server flags
 	send.PersistentFlags().StringP("hostname", "", "localhost", "Hostname of the SMTP server to connect to")
-	send.PersistentFlags().StringP("port", "", "25", "Port of the SMTP server to connect to")
+	send.PersistentFlags().StringSliceP("port", "", []string{"25", "465", "587", "2525"}, "Port of the SMTP server to connect to, comma separated")
 	send.PersistentFlags().StringP("username", "", "", "Username to authenticate with")
 	send.PersistentFlags().StringP("password", "", "", "Password to authenticate with")
 

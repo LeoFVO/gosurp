@@ -39,5 +39,5 @@ var listen = &cobra.Command{
 
 func init() {
 	listen.PersistentFlags().StringP("hostname", "", "localhost", "Hostname to listen on")
-	listen.PersistentFlags().StringSliceP("port", "", []string{"25"}, "Ports to listen on, can be specified multiple times")
+	listen.PersistentFlags().StringSliceP("port", "", []string{"25"}, "Ports to listen on, comma separated")
 }

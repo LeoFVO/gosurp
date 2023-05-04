@@ -31,6 +31,8 @@ func (s *Server) Send(mail Envelope, options SendOptions) error {
         return fmt.Errorf("SMTP server port required")
     }
 
+    log.Debugf("Trying to connect to SMTP server %s:%s", s.Hostname, s.Port)
+
     s.Hostname = utils.GetSMTPServerAddress(s.Hostname)
 
     // Connect to the SMTP server.
@@ -41,12 +43,14 @@ func (s *Server) Send(mail Envelope, options SendOptions) error {
     }
     defer conn.Close()
 
+    log.Tracef("SMTP server connection established to %s:%s", s.Hostname, s.Port)
+
     // Set up an SMTP client.
     client, err := smtp.NewClient(conn, s.Hostname)
     if err != nil {
         return err
     }
-    log.Debugf("SMTP client created")
+    log.Infof("SMTP client successfully created and connected to %s:%s", s.Hostname, s.Port)
     defer client.Quit()
  
     if options.WithTLS {

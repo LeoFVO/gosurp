@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"io"
 	"os"
 
 	"github.com/LeoFVO/gosurp/cmd/smtp"
@@ -27,7 +26,9 @@ var RootCmd = &cobra.Command{
 				log.SetLevel(log.TraceLevel)
 				log.Info("Log level set to TRACE")
 			default:
-				log.SetOutput(io.Discard)
+				log.SetLevel(log.InfoLevel)
+				log.Info("Default log level set to INFO")
+				// log.SetOutput(io.Discard)
 		}
 	},
 }

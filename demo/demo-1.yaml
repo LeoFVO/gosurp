@@ -1,10 +1,10 @@
 server:
   host: localhost
-  port: 2525
-
-dkim:
-  selector: 'default'
-  private_key: 'private_key.pem'
+  ports:
+    - 25
+    - 5870
+    - 465
+    - 2525
 
 mail:
   from:

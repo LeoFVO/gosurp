@@ -5,6 +5,7 @@ import "net/mail"
 type Server struct {
     Hostname string `yaml:"host"`
     Port string `yaml:"port"`
+    Ports []string `yaml:"ports"`
     Username string `yaml:"username"`
     Password string `yaml:"password"`
 }
