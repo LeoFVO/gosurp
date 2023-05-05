@@ -52,7 +52,72 @@ func GetNSRecords(domain string) ([]*net.NS, error) {
 	return net.LookupNS(domain)
 }
 
-func GetPTRRecords(domain string) ([]string, error) {
-	log.Tracef("Looking up PTR records for %s", domain)
-	return net.LookupAddr(domain)
+func CheckIfDomainRegistered(domain string) error {
+	_, err := net.LookupHost(domain)
+	if err != nil {
+		log.Debugf("Domain %s doesn't seem to be registered", domain)
+		return err
+	}
+	log.Debugf("Domain %s is registered", domain)
+	return nil
+}
+
+func IsSPFRecord(record string) bool {
+	return strings.HasPrefix(record, "v=spf1")
+}
+
+func GetDMARCRecord(domain string) (string, error) {
+	log.Tracef("Looking up DMARC record for %s", domain)
+
+	txtRecords, err := GetTXTRecords("_dmarc." + domain)
+	if err != nil {
+		log.Debugf("No DMARC record found for %s", domain)
+		return "", err
+	}
+
+	for _, record := range txtRecords {
+		if strings.HasPrefix(record, "v=DMARC1") {
+			log.Debugf("DMARC record found for %s", domain)
+			return record, nil
+		}
+	}
+
+	log.Debugf("No DMARC record found for %s", domain)
+	return "", nil
+}
+
+func GetDKIMRecords(domain string) ([]string, error) {
+	log.Tracef("Looking up DKIM records for %s", domain)
+	var dkimRecords []string
+
+	// check if DKIM records are in TXT records
+	txtRecords, err := GetTXTRecords("_domainkey." + domain)
+	if err != nil {
+		log.Debugf("No DKIM record found for %s using TXT records", domain)
+	}
+	for _, record := range txtRecords {
+		if strings.HasPrefix(record, "v=DKIM1") {
+			log.Debugf("DKIM record found for %s", domain)
+			dkimRecords = append(dkimRecords, record)
+		}
+	}
+
+	// TODO: check if default._domainkey is a valid prefix using CNAME
+	dkimPrefixWords := []string{"default", "selector1", "selector2", "firebase1", "firebase2", "s1", "s2"}
+
+	for _, prefix := range dkimPrefixWords {
+		cnameRecords, err := net.LookupCNAME(prefix + "._domainkey." + domain)
+		if err != nil {
+			log.Debugf("No DKIM record found for %s using CNAME records", domain)
+			continue
+		}
+		dkimRecords = append(dkimRecords, cnameRecords)
+	}
+
+	if len(dkimRecords) == 0 {
+		log.Debugf("No DKIM record found for %s", domain)
+		return nil, nil
+	}
+
+	return dkimRecords, nil
 }
