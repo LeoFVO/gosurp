@@ -67,28 +67,38 @@ var send = &cobra.Command{
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		fromEmail, _ := cmd.Flags().GetString("from")
-		toEmail, _ := cmd.Flags().GetStringSlice("to")
-		subject, _ := cmd.Flags().GetString("subject")
-		body, _ := cmd.Flags().GetString("body")
 
-		// Create a new SMTP server instance
-		hostname, _ := cmd.Flags().GetString("hostname")
-		ports, _ := cmd.Flags().GetStringSlice("port")
-		username, _ := cmd.Flags().GetString("username")
-		password, _ := cmd.Flags().GetString("password")
-		server := smtp.Server{
-			Hostname: hostname,
-			Username: username,
-			Password: password,
+		// Defining the mail to send
+		fromArg, _ := cmd.Flags().GetString("from")
+		toArg, _ := cmd.Flags().GetStringSlice("to")
+		subjectArg, _ := cmd.Flags().GetString("subject")
+		bodyArg, _ := cmd.Flags().GetString("body")
+
+		from, _ := mail.ParseAddress(fromArg)
+		to := []mail.Address{}
+		for _, recipient := range toArg {
+			recipient, _ := mail.ParseAddress(recipient)
+			to = append(to, *recipient)
 		}
 
-		// Should we try to bypass DKIM 
+		log.Tracef("Creating mail with from: %s, to: %s, subject: %s, body: %s", from.Address, to[0].Address, subjectArg, bodyArg)
+		mail := smtp.Envelope{From: *from, To: to, Subject: subjectArg, Body: bodyArg}
+
+
+		// Defining custom options for the usurpation
+		options := smtp.SendOptions{}
+
+		// Create a new SMTP server instance, server we are usurping
+		hostname, _ := cmd.Flags().GetString("hostname")
+		server := smtp.Server{Hostname: hostname}
+
+
+
+		// Set custom DKIM settings
 		selector, _ := cmd.Flags().GetString("dkim-selector")
 		privateKey, _ := cmd.Flags().GetString("dkim-key")
 		domain, _ := cmd.Flags().GetString("dkim-domain")
 
-		options := smtp.SendOptions{}
 		if selector != "" && privateKey != "" {
 			options.DKIM = smtp.DKIM{
 				Selector: selector,
@@ -105,20 +115,9 @@ var send = &cobra.Command{
 		timeout, _ := cmd.Flags().GetDuration("timeout")
 		options.Timeout = timeout
 
-
-		from, _ := mail.ParseAddress(fromEmail)
-		to := []mail.Address{}
-		for _, recipient := range toEmail {
-			recipient, _ := mail.ParseAddress(recipient)
-			to = append(to, *recipient)
-		}
-
-		mail := smtp.Envelope{From: *from, To: to, Subject: subject, Body: body}
-		log.Infof("Sending email from %s to %s", (&mail.From).Address, mail.To[0].Address)
-
 		// Send email to specified port
 		sendToPort := func(port string) error {
-			server.Port = port
+			options.Port = port
 			if err := server.Send(mail, options); err != nil {
 				log.Errorf("Error while sending email: %v", err)
 				return err
@@ -126,13 +125,20 @@ var send = &cobra.Command{
 			return nil
 		}
 
+		ports, _ := cmd.Flags().GetStringSlice("port")
+		
+		log.Infof("Sending email from %s to %s", (&mail.From).Address, mail.To[0].Address)
 		// Send email to all specified ports, stop at first success
 		for _, port := range ports {
 			if err := sendToPort(port); err != nil {
+				if len(ports) > 1 {
 				log.Warnf("Cannot send email to port %s, trying next port...", port)
+				} else {
+					log.Warnf("Cannot send email to port %s", port)
+				}
 				continue
 			}
-			log.Infof("Email successfully sent to %s:%s", server.Hostname, port)
+			log.Infof("Email successfully sent to %s", mail.To[0].Address)
 			log.Tracef("Email successfully sent to port %s, stopping here", port)
 			return nil // Stop at first success
 		}
@@ -143,28 +149,24 @@ var send = &cobra.Command{
 
 func init() {
 	// Mail flags
-	send.PersistentFlags().StringP("from", "", "John Doe <john.doe@fsociety.com>", "Email address to send mail from")
-	send.PersistentFlags().StringSlice("to", []string{"agent1337@evilcorp.com"}, "Email address to send mail to (separated by comma)")
-	send.PersistentFlags().StringP("subject", "", "My phishing mail", "Subject to send mail with")
-	send.PersistentFlags().StringP("body", "", "Here is my simple email test. Did you received it ?", "Body to send mail with")
+	send.PersistentFlags().StringP("from", "f", "John Doe <john.doe@fsociety.com>", "Email address to send mail from")
+	send.PersistentFlags().StringSliceP("to", "t", []string{"agent1337@evilcorp.com"}, "Email address to send mail to (separated by comma)")
+	send.PersistentFlags().StringP("subject", "s", "My phishing mail", "Subject to send mail with")
+	send.PersistentFlags().StringP("body", "b", "Here is my simple email test. Did you received it ?", "Body to send mail with")
 
-	// SMTP server flags
-	send.PersistentFlags().StringP("hostname", "", "localhost", "Hostname of the SMTP server to connect to")
-	send.PersistentFlags().StringSliceP("port", "", []string{"25", "465", "587", "2525"}, "Port of the SMTP server to connect to, comma separated")
-	send.PersistentFlags().StringP("username", "", "", "Username to authenticate with")
-	send.PersistentFlags().StringP("password", "", "", "Password to authenticate with")
-
+	// SMTP usurped server flags
+	send.PersistentFlags().StringP("hostname", "", "", "Hostname of the SMTP server to connect to")
+	
 	// Bypass DKIM flags
 	send.PersistentFlags().StringP("dkim-selector", "", "", "DKIM selector to use")
 	send.PersistentFlags().StringP("dkim-domain", "", "", "DKIM domain to use")
 	send.PersistentFlags().StringP("dkim-key", "", "", "DKIM private key to use")
-
-	// Force TLS flags
-	send.PersistentFlags().BoolP("tls", "", false, "Force TLS connection")
 	
-	// Set timeout for connect
+	// Option flags for the SMTP server we are connecting to
+	send.PersistentFlags().BoolP("tls", "", false, "Force TLS connection")
+	send.PersistentFlags().StringSliceP("port", "", []string{"25", "465", "587", "2525"}, "Port of the SMTP server to connect to, comma separated")
 	send.PersistentFlags().DurationP("timeout", "", 20 * time.Second, "Timeout for connection")
-
+	
 	// Use can provide a config file to use instead of the flags
-	send.PersistentFlags().StringP("from-file", "f", "", "Config file to use")
+	send.PersistentFlags().StringP("from-file", "", "", "Config file to use")
 }

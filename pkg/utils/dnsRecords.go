@@ -15,25 +15,26 @@ func IsIp(value string) bool {
 }
 
 func GetSMTPServerAddress(domain string) string {
-	var server string
+	server := domain
 	if!IsIp(domain) {
 		log.Debugf("SMTP server address is not an IP address, looking up MX records")
 		mxRecords, err := GetMXRecords(domain)
 		if len(mxRecords) == 0 || err != nil {
-				log.Warnf("no MX records found for %s", domain)
+				log.Warnf("No MX records found for %s", domain)
+		} else {
+			server = strings.TrimSuffix(mxRecords[0].Host, ".")
 		}
-		server = strings.TrimSuffix(mxRecords[0].Host, ".")
-
 		log.Debugf("Using %s as SMTP server address", server)
+	} else if domain == "localhost" {
+		log.Debugf("SMTP server address is localhost, using it as is")
 	} else {
-		log.Debugf("SMTP server address is an IP address or localhost, using it as is")
-		server = domain
+		log.Debugf("SMTP server address is an IP address, using it as is")
 	}
 	return server
 }
 
 func GetMXRecords(domain string) ([]*net.MX, error) {
-	log.Tracef("Looking up MX records for %s", domain)
+	log.Tracef("Looking up MX records for domain %s", domain)
 	return net.LookupMX(domain)
 }
 

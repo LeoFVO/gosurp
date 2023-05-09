@@ -19,45 +19,57 @@ type SendOptions struct {
     WithTLS bool
     DKIM DKIM
     Timeout time.Duration
+    Port string
 }
 
 // SendMail sends an email using the provided SMTP server and mail message.
-func (s *Server) Send(mail Envelope, options SendOptions) error {
+func (s Server) Send(mail Envelope, options SendOptions) error {
+    
+    var usurpedServer Server
 
-    if s.Hostname == "" {
-        return fmt.Errorf("SMTP server address required")
+    // Define the hostname of the smtp server we are usurping.
+    if s.Hostname != "" {
+        usurpedServer = s
+        log.Debugf("Using custom usurped server hostname: %s", usurpedServer.Hostname)
+    } else {
+        usurpedServer.Hostname = strings.Split(mail.From.Address, "@")[1]
+        log.Debugf("No custom usurped server hostname provided, using the domain from the \"From\" header : %s", usurpedServer.Hostname)
     }
-    if s.Port == "" {
-        return fmt.Errorf("SMTP server port required")
-    }
-
-    log.Debugf("Trying to connect to SMTP server %s:%s", s.Hostname, s.Port)
-
-    s.Hostname = utils.GetSMTPServerAddress(s.Hostname)
+    
+    // Get the target SMTP server address.
+    targetServer := utils.GetSMTPServerAddress(strings.Split(mail.To[0].Address, "@")[1])
+    log.Debugf("Trying to connect to SMTP server %s:%s", targetServer, options.Port)
 
     // Connect to the SMTP server.
     session := net.Dialer{Timeout: options.Timeout}
-    conn, err := session.Dial("tcp", fmt.Sprintf("%s:%s", s.Hostname, s.Port))
+    // Connect to the target SMTP server
+    conn, err := session.Dial("tcp", fmt.Sprintf("%s:%s", targetServer, options.Port))
     if err != nil {
         return err
     }
     defer conn.Close()
-
-    log.Tracef("SMTP server connection established to %s:%s", s.Hostname, s.Port)
+    log.Tracef("SMTP server connection established to %s:%s", targetServer, options.Port)
 
     // Set up an SMTP client.
-    client, err := smtp.NewClient(conn, s.Hostname)
+    client, err := smtp.NewClient(conn, targetServer)
     if err != nil {
+        log.Errorf("Error creating SMTP client: %s", err)
         return err
     }
-    log.Infof("SMTP client successfully created and connected to %s:%s", s.Hostname, s.Port)
+    err = client.Hello(usurpedServer.Hostname)
+    if err != nil {
+        log.Errorf("Error sending HELO: %s", err)
+        return err
+    }
+
+    log.Infof("SMTP client successfully created and connected from %s to %s", conn.LocalAddr().String(), targetServer)
     defer client.Quit()
  
     if options.WithTLS {
        log.Debugf("SMTP server requires TLS, converting connection to TLS")
         // Convert the connection to a TLS connection.
        config := &tls.Config{
-           ServerName: s.Hostname,
+           ServerName: usurpedServer.Hostname,
        }
 
        //ask for STARTTLS
@@ -72,14 +84,6 @@ func (s *Server) Send(mail Envelope, options SendOptions) error {
        log.Debugf("Connection converted to TLS")
    }
 
-    // Authenticate with the server.
-    if s.Username != "" && s.Password != "" {
-        if err := client.Auth(smtp.PlainAuth("", s.Username, s.Password, s.Hostname)); err != nil {
-            return err
-        }
-    }
-
-
     // Set the sender and recipient of the email.
     if err := client.Mail(mail.From.Address); err != nil {
         return err
@@ -90,7 +94,7 @@ func (s *Server) Send(mail Envelope, options SendOptions) error {
         }
     }
 
-    // Send the email body.
+    // Building the mail envelope
     wc, err := client.Data()
     if err != nil {
         return err
@@ -103,7 +107,7 @@ func (s *Server) Send(mail Envelope, options SendOptions) error {
          * This is the domain that the DKIM public key will be published under in DNS.
          * The domain name should be the same as the domain name in the From header of the email.
          */
-		Domain: strings.TrimSuffix(strings.Split(mail.From.String(), "@")[1], ">"),
+		Domain: strings.Split(mail.From.Address, "@")[1],
         /*
          * In DKIM, a selector is a string that identifies a specific public key in the DNS record for the domain. 
          * The DKIM signature for a message includes the selector value, allowing the recipient to look up the corresponding public key in DNS.
@@ -124,7 +128,6 @@ func (s *Server) Send(mail Envelope, options SendOptions) error {
 	}
 
     // if bypass DKIM is enabled, we need to sign the email using the provided private key and change selector
-
     if options.DKIM != (DKIM{}) {
         log.Tracef("Custom DKIM config provided, using selector %s and private key %s", options.DKIM.Selector, options.DKIM.PrivateKey)
         signer.Selector = options.DKIM.Selector

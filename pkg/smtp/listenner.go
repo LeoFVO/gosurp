@@ -36,7 +36,7 @@ func (server Server) Listen() error {
 func handleConnection(conn net.Conn) {
 	// Send initial greeting message according to the RFC
 	conn.Write([]byte("220 localhost ESMTP Service Ready\r\n"))
-	log.Debugf("Connection from %s to %s", conn.RemoteAddr().String(), conn.LocalAddr().String())
+	log.Infof("Connection from %s to %s", conn.RemoteAddr().String(), conn.LocalAddr().String())
 
 	// Buffer for incoming messages
 	buf := make([]byte, 1024)
@@ -75,7 +75,7 @@ func handleConnection(conn net.Conn) {
 				conn.Write([]byte("250 localhost\r\n"))
 				conn.Write([]byte("250-SIZE 31457280\r\n"))
 				conn.Write([]byte("250-8BITMIME\r\n"))
-				conn.Write([]byte("250-STARTTLS\r\n"))
+				// conn.Write([]byte("250-STARTTLS\r\n"))
 				conn.Write([]byte("250-OK\r\n"))
 			case "MAIL":
 				if len(args) < 1 {
@@ -169,7 +169,7 @@ func handleConnection(conn net.Conn) {
 				log.Tracef("Received command %s", command)
 				conn.Write([]byte("221 Bye\r\n"))
 				conn.Close()
-				log.Debugf("Connection from %s closed\n", conn.RemoteAddr().String())
+				log.Infof("Connection from %s closed\n", conn.RemoteAddr().String())
 				return
 			default:
 				log.Debugf("Received unknown command %s with args: %s", command, strings.Join(args, ","))

@@ -12,7 +12,7 @@ import (
 // rootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
 	Use:   "gosurp",
-	Short: "gosurp is a simple SMTP server and client written in Go",
+	Short: "gosurp is an usurpation tool, supporting SMTP and DNS protocols for now.",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		cliFlag, _ := cmd.Flags().GetCount("verbose")
 
