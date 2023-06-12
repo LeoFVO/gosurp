@@ -1,0 +1,35 @@
+---
+title: 'Ambiguous domain'
+description: 'Recipe: Ambiguous domain'
+---
+
+Inconsistencies can also arise between authentication components and DNS components: what the authentication component verifies differs from what the DNS component queries.  
+An attacker can craft ambiguous domains to make the authentication component believe that it's verifying the legitimate domain, but the DNS component actually queries the attacker's domain to obtain policy records.
+
+The authentication component generates "pass" authentication results because the attacker controls the policy retrieved via DNS.
+
+## NUL ambiguity
+
+One way to craft such domains uses the NUL ("\x00") character, which terminate strings in some languages (e.g., C) but not in others (e.g., Perl or PHP).
+
+For example, we can fool Gmail.com using this technique.
+Gmail's DKIM and DNS components differ in interpreting NULs in domain name.  
+First the attacker constructs a fake email with arbitrary email content.  
+They then sign the message with their own private DKIM key to generate the DKIM-Signature header, which specifies the "d=" tag as legitimate.com and the ‘s=' tag as "attacker.com.\x00.any".
+
+```bash
+gosurp smtp send -vvv --from someone@legitimate.com --to victim@localhost --dkim-domain legitimate.com --dkim-key ./private.key --dkim-selector "attack.com.\x00.any._domainkey.legitimate.com"
+```
+
+_NOTE: You need to provide a valide private key matching the public one available on your domain._
+
+When the Gmail server receives the email, its DKIM component queries the domain s.\_domainkey.d, i.e., "attack.com.\x00.any.\_domainkey.legitimate.com", to obtain the public key.
+
+But when it invokes to resolve this domain, the DNS component parses the NUL character as a string terminator and instead obtains the public key from attack.com.
+
+The DKIM component thus uses the attacker's public key to verify the forged message, erroneously believing that the legitimate domain correctly signed the message.  
+The spoofed message also passes Gmail's DMARC verification because the "d=" domain is identical to the From header domain.
+
+References:
+
+- https://www.jianjunchen.com/p/composition-kills.USESEC20.pdf (page 5)

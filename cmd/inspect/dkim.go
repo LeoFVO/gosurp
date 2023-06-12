@@ -9,10 +9,10 @@ import (
 )
 
 var inspectDKIM = &cobra.Command{
-	Use:   "dkim",
+	Use:   "dkim <yourdomain.com>",
 	Aliases: []string{},
-	Short: "Inspect domain DKIM records",
-	Long:  `Inspect domain DKIM records and configuration`,
+	Short: "Inspect DKIM records",
+	Long:  `Inspect DKIM records and configuration`,
 	Args:  cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := strings.TrimSpace(strings.ToLower(args[0]))

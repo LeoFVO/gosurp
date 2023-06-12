@@ -9,9 +9,9 @@ import (
 )
 
 var inspectDomain = &cobra.Command{
-	Use:   "domain",
+	Use:   "domain <yourdomain.com>",
 	Aliases: []string{"dns"},
-	Short: "Inspect domain public records",
+	Short: "Inspect all domain public records",
 	Long:  `Inspectall domain public records and configuration`,
 	Args:  cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {

@@ -9,10 +9,10 @@ import (
 )
 
 var inspectSPF = &cobra.Command{
-	Use:   "spf",
+	Use:   "spf <yourdomain.com>",
 	Aliases: []string{},
-	Short: "Inspect domain SPF records",
-	Long:  `Inspect domain SPF records and configuration`,
+	Short: "Inspect SPF records",
+	Long:  `Inspect SPF records and configuration`,
 	Args:  cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := strings.TrimSpace(strings.ToLower(args[0]))

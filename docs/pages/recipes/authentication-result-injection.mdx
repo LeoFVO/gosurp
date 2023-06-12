@@ -1,0 +1,93 @@
+---
+title: 'Authentication results injection'
+description: 'Recipe: Authentication results injection'
+---
+
+Another vector for potential ambiguity arises from how results
+are communicated from one component to another.  
+The presence of meta-characters in the communication introduces the
+possibility of "results injection" analogous to SQL or command injection.
+
+## Authentication result header syntax
+
+This threat depends on the details of how SPF and DKIM components
+forward their authentication results to DMARC components to enable it
+to perform its alignment check on the value of the From header.  
+RFC 8601 defines the Authentication-Results header to provide a common
+framework for communicating these authentication results, for example:
+
+```text
+Authentication-Results: example.com; spf=pass smtp.mailfrom=sender@sender.com; dkim=pass (1024-bit key) reason="signature ok" header.d=sender.com;
+```
+
+Here, "spf=pass" and "dkim=pass" indicate that the message passed both
+SPF and DKIM verification for the mail server for example.com.  
+"smtp.mailfrom" represents the domain verified by the SPF component,
+and "header.d" represents the domain verified by the DKIM component.  
+The text in parentheses reflect a comment.  
+The DMARC component parses this header to extract the SPF/DKIM
+authentication results and check
+whether the tested value align with the domain in the From header.
+
+## Authentication results injection attacks
+
+A vulnerability arises because an attacker can control the domain name
+embedded in the "header.d" and "smtp.mailfrom" fields.
+The flexibility of domain-name syntax provides fertile ground
+for attackers to construct malformed domain names.
+Although many applications require domain names to follow specific
+syntax rules—for example, domain name registrars only allow users to
+register domain names under the LDH rules (only letters, digits, hyphens)
+—the DNS protocol does not impose any restrictions on the characters in
+a domain label.  
+In particular, an attacker can introduce malformed domains that include
+meta-characters, for example "a.com(.b.com". SPF and DKIM components
+may treat those characters as data, while DMARC components may parse
+them as control information.  
+We found two types of injection attacks based on such malformed domains.
+
+### DKIM authentication results injection
+
+Attackers can generate DKIM-Signature headers using their own private
+keys, with "d=" values that embed a literal open parenthesis, such
+as "legitimate.com(.attacker.com".
+When receiving this message, the DKIM component queries
+"selector.\_domainkey.legitimate.com(. attacker.com" — a domain
+under the attacker's control — to obtain the DKIM public key to verify
+the message.
+The DKIM component then generates:
+
+```text
+Authentication-results: victim.com ; dkim=pass (1024-bit key ) header.d=legitimate.com(.attacker.com;
+```
+
+When receiving the Authentication-Results header, the DMARC component
+parses "header.d" as legitimate.com, because it parses the content
+after the "(" as a comment. Since the "header.d" value matches the From
+header domain, the attacker's message passes DMARC verification.
+Along with "(", double (") and single (') quote characters can also
+work for this technique.  
+Because RFC 5322 defines characters within the quotes as atoms, DMARC
+modules may parse the content after the quote as part of the atom.
+
+### SPF authentication results injection
+
+Similarly, an attacker can craft malformed addresses in MAIL FROM
+commands to bypass SPF and DMARC verification.
+The SPF component verifies the attacker controlled domain
+"legitimate.com(.attacker.com", while the DMARC module takes the first
+half of the domain for the alignment test.
+We found that some mail servers perform a degree of validation on the
+MAIL FROM address's syntax, and reject the above address.
+But attackers can bypass their validation. Here, the mail server takes
+the second "@" as the delimiter, and recognizes it as a valid email
+address, while the SPF component takes the first "@" as the delimiter,
+and thus queries "legitimate.com'@a.attack.com" — the attacker's
+domain—to verify the sending IP address.  
+When the DMARC component parses the authentication results, it takes
+the content after the single quote as a quoted string, and uses
+legitimate.com for the alignment test.
+
+References:
+
+- https://www.jianjunchen.com/p/composition-kills.USESEC20.pdf (page 6)

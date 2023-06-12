@@ -10,7 +10,9 @@ function Logo() {
       <img
         style={{ borderRadius: '5px', marginRight: '10px' }}
         width={50}
-        src={process.env.NEXT_PUBLIC_REPOSITORY.split('/')[1] + '/logo.png'}
+        src={
+          '/' + process.env.NEXT_PUBLIC_REPOSITORY.split('/')[1] + '/logo.png'
+        }
       ></img>
       <h1 style={{ fontWeight: 'bold' }}>
         {process.env.NEXT_PUBLIC_REPOSITORY.split('/')[1]}
@@ -22,8 +24,8 @@ function Logo() {
 export default {
   logo: <Logo />,
   primaryHue: {
-    dark: 25,
-    light: 25,
+    dark: 199,
+    light: 199,
   },
   docsRepositoryBase: `https://github.com/${process.env.NEXT_PUBLIC_REPOSITORY}/tree/main/docs`,
   project: {

@@ -9,10 +9,10 @@ import (
 )
 
 var inspectDMARC = &cobra.Command{
-	Use:   "dmarc",
+	Use:   "dmarc <yourdomain.com>",
 	Aliases: []string{},
-	Short: "Inspect domain DMARC records",
-	Long:  `Inspect domain DMARC records and configuration`,
+	Short: "Inspect DMARC records",
+	Long:  `Inspect DMARC records and configuration`,
 	Args:  cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := strings.TrimSpace(strings.ToLower(args[0]))

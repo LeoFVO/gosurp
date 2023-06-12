@@ -1,0 +1,121 @@
+---
+title: 'How SMTP work'
+description: 'Understand how SMTP work and which measure are made to secure the protocol.'
+---
+
+# Simple Mail Transfert Protocol (SMTP)
+
+Simple Mail Transfer Protocol (SMTP) provides an Internet
+standard for mail transmission [2]. Figure 2 shows the three
+main steps to deliver an email message. Alice's email is first
+transmitted to her service provider via her mail user agent
+(MUA). The sending service then sends it to Bob's service
+provider using SMTP. The message is then delivered to Bob's
+MUA via IMAP (Internet Message Access Protocol) or POP
+(Post Office Protocol).
+
+## SMTP Lack authentication
+
+SMTP's original specification lacked mechanisms to authenticate the sender's identity, enabling any
+Internet host to impersonate another's identity by sending
+spoofed emails. In practice, attackers usually exploit SMTP
+by running their own email servers or clients.
+SMTP's design includes multiple "identities" when handling messages. Both the MAIL FROM and From headers
+identify the email sender, but they have different meanings
+in an SMTP conversation. The first represents the user who
+transmitted the message, and is usually not displayed to the
+recipient. The second represents the user who composed the
+message, and is visible to the recipient.
+In addition, SMTP introduces multiple other sender identities, such as the HELO command, Sender and Resent-From
+headers. Nothing in the design enforces consistencies among
+these. Thus, the design poses a basic question for any authentication mechanism: which identity to authenticate?
+
+## Preventing spoofing
+
+To combat email forgery, various email authentication mechanisms have been developed, including SPF, DKIM,
+DMARC, BIMI, and ARC .
+
+### Sender Policy Framework (SPF)
+
+Sender Policy Framework (SPF) allows a domain
+owner to publish DNS records to specify which servers are
+allowed to send emails for the domain. A mail server receiving a message first queries any domain present in the MAIL
+FROM and—recommended, but not required—HELO commands, to obtain the SPF policy, and then checks whether the
+sender's IP address matches the policy. If either HELO or
+MAIL FROM check fails, the mail server enforces the policy
+specified by domain owner (e.g., hard fail, soft fail) to reject
+the message
+One major problem of SPF is incompatibility with mail
+forwarders. When an email is forwarded, SPF checks can fail
+because SPF components authenticate the forwarding server,
+rather than the original sending server.
+
+### DomainKeys Identified Mail (DKIM)
+
+DomainKeys Identified Mail (DKIM) uses cryptography to authenticate senders and protect email integrity.
+The general idea behind DKIM is to let senders sign parts of
+messages so that receivers can validate them. When sending a
+message, the sending mail server generates a DKIM-Signature
+header using its private key and attaches it to the message.
+When the destination server receives the email, it queries the
+domain in the d= field of the DKIM-Signature header to obtain
+the signer's public key, and verifies the DKIM signature's
+validity.
+
+```text
+DKIM - Signature: v =1; a=rsa - sha256 ; c= relaxed /
+relaxed ; d= example . com ; s= selector ; h=
+From:To:Subject ; l =200; bh = I8iwjsTG /
+djENwF0HjjQSgUtWKv5izitR9 + mDu1ambA =; b=
+HA1a66oMfyVbQwZLd3Dkm3ZDfomVU1FgMF ...
+```
+
+The above shows an example of a DKIM-Signature header.
+The important tags for our work include:
+
+- d represents the signer's domain.
+- s stands for selector, which permits multiple
+  keys under the "d=" domain for fine-grained
+  signatory control. The tag is used to obtain
+  the public key by querying "s.\_domainkey.d"
+  (selector.\_domainkey.example.com here).
+- h represents the list of headers covered by the signature.
+- l is an optional tag giving the length of the message
+  body covered by the signature.
+
+Unfortunately, neither SPF nor DKIM provides a complete
+solution for preventing email spoofing. SPF authenticates the
+HELO/MAIL FROM identifier and DKIM authenticates the d=
+field in DKIM-signature header: neither of them authenticates
+the From header displayed to the end-user, which means that
+even if an email passes SPF and DKIM validation, its From
+address can still be forged.
+
+### Domain-based Message Authentication Reporting & Confidence (DMARC)
+
+Domain-based Message Authentication, Reporting & Conformance (DMARC) is designed to fix this final
+trust problem by building on SPF and DKIM. When receiving
+a message, the receiving mail server queries the domain in
+the From header to obtain its DMARC policy, which specifies
+what the receiver should do with the incoming email. The
+receiving server performs an identifier alignment test to check
+whether the domain in the From header matches the domain
+name verified by SPF or DKIM. The alignment test has two
+modes: strict and relaxed. In strict mode, the From header domain needs to exactly match the SPF or DKIM-authenticated
+identifier. In relaxed mode (default mode), it only need to
+have the same registered domain. If either SPF or DKIM
+indicates a positive result, and the From domain passes the
+alignment test, the email passes DMARC authentication. This
+design provides more robustness, for example, for forwarded
+emails: SPF may fail, but DKIM will survive. If both fail, the
+server will enforce the DMARC policy specified by the domain owners, such as rejecting the email and sending failure
+reports.
+
+## Summary
+
+Combining these three mechanisms, an email system ensures that the address in the From header cannot be forged,
+and prevents email forgery.
+
+References:
+
+- https://www.jianjunchen.com/p/composition-kills.USESEC20.pdf

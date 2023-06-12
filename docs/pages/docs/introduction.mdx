@@ -1,6 +1,42 @@
 # {process.env.NEXT_PUBLIC_REPOSITORY.split('/')[1]}
 
-[Get started →](./docs/introduction.mdx)
+GoSurp is a cli tool to work on email and DNS usurpation. It is written in Go and is distributed as a single binary without any external dependencies.
+
+```bash
+gosurp -h
+```
+
+This will display help for the tool. Here are all the switches it supports.
+
+### Inspect DNS Record
+
+First of all, Gosurp allow you to inpect DNS records.
+
+```bash
+gosurp inspect domain <yourdomain.com>
+```
+
+You can also look for specific DNS records using:
+
+```bash
+gosurp inspect (spf/dkim/dmarc) <yourdomain.com>
+```
+
+### Email usurpation
+
+First of all, to allow you working on building the good mail without sending it, you can use the following command to start a local SMTP server that will print the mail content in the console like a debugger.
+
+```bash
+gosurp smtp listen -vvv
+# or
+gosurp smtp listen --hostname localhost --port 2525 -vvv
+```
+
+Then, you can use the following command to send a mail using the local SMTP server.
+
+```bash
+gosurp smtp send -vvv --from attacker@fsociety.local --to victim@localhost --port 2525
+```
 
 ## Contributing
 

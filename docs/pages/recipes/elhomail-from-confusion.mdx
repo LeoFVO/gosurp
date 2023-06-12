@@ -1,0 +1,58 @@
+---
+title: 'EHLO/MAIL FROM confusion'
+description: 'Recipe: EHLO/MAIL FROM confusion'
+---
+
+SMTP employs two different identifiers — HELO and MAIL
+FROM — to represent the email sender who transmits a message. The SPF standard (RFC 7208) states that SPF verifiers
+should check both; checking MAIL FROM is mandatory, and
+HELO is recommended. The DMARC standard (RFC 7489)
+states that DMARC verifiers should use the MAIL FROM
+identity to perform the alignment test to validate the identity
+in the From header. If the MAIL FROM address is empty, the
+verifier should use the HELO identity.
+This design introduces the possibility that different components might authenticate different identifiers. When the SPF
+component cannot verify the MAIL FROM address, but can
+verify the HELO identifier, the DMARC component might
+still use the MAIL FROM identifier for its alignment test. We
+developed two techniques to exploit these possibilities:
+
+## Non-existent subdomains.
+
+The first technique crafts a MAIL FROM domain as a non-existent
+subdomain of a legitimate domain.
+SPF components cannot verify the MAIL FROM address because the non-existent
+domain doesn't have any SPF policy. Some SPF implementations
+(e.g., Python-postfix-policyd-spf) will then only verify
+the HELO identifier, forwarding a "pass" result because the
+HELO domain is under the attacker's control. Some DMARC
+implementations (e.g., OpenDMARC), however, still use the
+MAIL FROM domain to perform the alignment test with the
+From header, because the MAIL FROM address is not empty.
+Doing so subverts the DMARC authentication because both
+the SPF check and the DMARC alignment test show positive
+results.
+
+```bash
+gosurp smtp send --hostname "attacker-domain.com" --from "attacker@invalid-subdomain.usurped-domain.com" --to "victim@target.com" --body "Your email body" --subject "Your email subject"
+```
+
+## "Empty" MAIL FROM addresses.
+
+The second technique exploits differences in how components treat an empty
+MAIL FROM address.  
+(Note that in the example, the left parenthesis is deliberately left unclosed.)  
+Some SPF implementations treat "(any@legitimate.com" as an
+empty MAIL FROM address, and thus forward the results
+of checking HELO to the DMARC component, because the
+string in the parentheses can be parsed as a comment according to RFC 5322.  
+Some DMARC implementations, however, may take it as a normal non-empty address, and use
+its domain for the alignment test.
+
+```bash
+gosurp smtp send --from "(any@legitimate.com" --to "victim@target.com" --body "Your email body" --subject "Your email subject"
+```
+
+References:
+
+- https://www.jianjunchen.com/p/composition-kills.USESEC20.pdf (page 5)

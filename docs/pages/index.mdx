@@ -5,24 +5,26 @@ description: 'Docs intro'
 
 **Welcome to {process.env.NEXT_PUBLIC_REPOSITORY.split('/')[1]}!**
 
-This is the `docs` starter template. It contains all of the features that you need to build a Markdown-powered documentation site, including:
-
-- ✅ **Full Markdown support (mdx included)**
-- ✅ **Responsive mobile-friendly design**
-- ✅ **Sidebar navigation**
-- ✅ **Search**
-- ✅ **Multi-language i18n**
-- ✅ **Automatic table of contents**
-- ✅ **Automatic list of contributors**
-- ✅ (and, best of all) **dark mode**
+GoSurp is a cli tool to work on email and DNS usurpation. It is written in Go and is distributed as a single binary without any external dependencies.
 
 ## Getting Started
 
 **This site is powered by [Nextra](https://nextra.site/).** Nextra is a new kind of static site generator that uses modern JavaScript under Next.JS, components, and build tools to build your site. It's fast, lightweight, and easy to use.
 
-[Get started →](./docs/introduction.mdx)
+[Get started with {process.env.NEXT_PUBLIC_REPOSITORY.split('/')[1]} →](./docs/introduction.mdx)
 
-### Project License
+## View recipes
+
+There are several kind of exploitations that can be made on SMTP protocole and it's implementation.
+Using research document and documentation I made some recipes for well know bypass and exploits allowing you to test it directly using gosurp.
+
+**Some recipes:**
+
+- [Ambiguous domains →](./recipes/ambiguous-domain.mdx)
+- [EHLO/MAIL FROM confusion →](./recipes/elhomail-from-confusion.mdx)
+- [Authentication results injection →](./recipes/authentication-result-injection.mdx)
+
+## Project License
 
 <a
   href={
